@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ heading }} | Comunidade Leitora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Cabeçalho e link para voltar ao início. -->
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-mark">CL</span>
+            <span>Comunidade Leitora</span>
+        </a>
+        <a class="header-link" href="{{ url_for('index') }}">Página inicial</a>
+    </header>
+
+    <main class="catalog-page">
+        <!-- Título da página e nova busca. -->
+        <section class="catalog-heading">
+            <p class="eyebrow">Catálogo de livros</p>
+            <h1>{{ heading }}</h1>
+            <form class="search-form catalog-search" action="{{ url_for('search') }}" method="get">
+                <label class="sr-only" for="catalog-search">Buscar livros</label>
+                <input id="catalog-search" name="q" type="search" placeholder="Título, autor ou assunto" value="{{ query }}">
+                <button type="submit">Buscar</button>
+            </form>
+        </section>
+
+        <!-- Categorias para uma nova recomendação. -->
+        <section class="category-strip" aria-label="Categorias de recomendação">
+            {% for category in categories %}
+            <a href="{{ url_for('category_recommendations', category=category) }}">{{ category }}</a>
+            {% endfor %}
+        </section>
+
+        <!-- Citações literárias nas margens da página de resultados. -->
+        <aside class="margin-quote search-quote-left-top">
+            <p>“O passado é prólogo.”</p>
+            <span>— William Shakespeare, A tempestade</span>
+        </aside>
+        <aside class="margin-quote search-quote-right">
+            <p>“A pessoa, seja cavalheiro ou dama, que não sente prazer em um bom romance deve ser intoleravelmente estúpida.”</p>
+            <span>— JANE AUSTEN, A ABADIA DE NORTHANGER</span>
+        </aside>
+        <aside class="margin-quote search-quote-left-bottom">
+            <p>“O mundo era para mim um segredo que eu desejava desvendar.”</p>
+            <span>— MARY SHELLEY, FRANKENSTEIN</span>
+        </aside>
+
+        <!-- Mensagens de erro, lista de livros ou aviso de lista vazia. -->
+        {% if error %}
+        <p class="feedback feedback-error">{{ error }}</p>
+        {% elif not books %}
+        <p class="feedback">Nenhum livro foi encontrado. Tente outra busca ou categoria.</p>
+        {% else %}
+        <section class="book-grid" aria-label="Livros encontrados">
+            {% for book in books %}
+            <article class="book-card">
+                <a class="book-cover" href="{{ url_for('book_detail', book_id=book.id) }}" aria-label="Abrir detalhes de {{ book.title }}">
+                    {% if book.cover %}
+                    <img src="{{ book.cover }}" alt="Capa de {{ book.title }}">
+                    {% else %}
+                    <span>Sem capa disponível</span>
+                    {% endif %}
+                </a>
+                <div class="book-card-content">
+                    <p class="book-category">{{ book.categories[0] if book.categories else "Livro" }}</p>
+                    <h2><a href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title }}</a></h2>
+                    <p class="book-author">{{ book.authors }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </section>
+        {% endif %}
+    </main>
+
+    <!-- Rodapé da página. -->
+    <footer class="site-footer">
+        <span>Comunidade Leitora</span>
+        <span>Descubra histórias para guardar.</span>
+    </footer>
+    <!-- Arquivo com interações em JavaScript. -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

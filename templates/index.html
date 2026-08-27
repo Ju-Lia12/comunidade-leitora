@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Comunidade Leitora: descubra livros e compartilhe resenhas.">
+    <title>Comunidade Leitora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Cabeçalho principal da plataforma. -->
+    <header class="site-header">
+        <a class="brand" href="/" aria-label="Página inicial da Comunidade Leitora">
+            <span class="brand-mark">CL</span>
+            <span>Comunidade Leitora</span>
+        </a>
+        <p class="header-message">Histórias para compartilhar</p>
+    </header>
+
+    <main>
+        <!-- Apresentação e busca de livros. -->
+        <section class="hero" aria-labelledby="hero-title">
+            <div class="hero-content">
+                <p class="eyebrow">Sua próxima leitura começa aqui</p>
+                <h1 id="hero-title">Um lugar para<br><em>quem ama livros.</em></h1>
+                <p class="hero-text">Encontre obras que combinam com você, descubra novas categorias e compartilhe suas impressões com a comunidade.</p>
+
+                <form class="search-form" action="{{ url_for('search') }}" method="get">
+                    <label class="sr-only" for="book-search">Busque por título, autor ou assunto</label>
+                    <input id="book-search" name="q" type="search" placeholder="Título, autor ou assunto" autocomplete="off">
+                    <button type="submit">Buscar livros</button>
+                </form>
+                <p class="search-note">Consulte títulos, autores, assuntos e categorias do catálogo Google Books.</p>
+            </div>
+            <!-- Mini estante criada apenas com CSS. -->
+            <div class="bookshelf" aria-hidden="true">
+                <span class="shelf-side shelf-left"></span>
+                <span class="shelf-side shelf-right"></span>
+                <span class="shelf shelf-top"></span>
+                <span class="shelf shelf-bottom"></span>
+                <span class="shelf-book book-wine"></span>
+                <span class="shelf-book book-green"></span>
+                <span class="shelf-book book-wine-bottom"></span>
+                <span class="shelf-book book-green-bottom"></span>
+            </div>
+        </section>
+
+        <!-- Explicação simples sobre a proposta da comunidade. -->
+        <section class="intro" aria-labelledby="intro-title">
+            <p class="eyebrow">Leitura em comunidade</p>
+            <h2 id="intro-title">Descubra, leia e deixe sua marca.</h2>
+            <div class="intro-columns">
+                <p>Use a busca para conhecer livros de diferentes gêneros, autores e épocas.</p>
+                <p>Ao terminar uma leitura, registre uma avaliação e ajude outras pessoas a escolherem sua próxima história.</p>
+            </div>
+        </section>
+
+        <!-- Links para recomendar livros por categoria. -->
+        <section class="categories" aria-labelledby="categories-title">
+            <p class="eyebrow">Recomendações por categoria</p>
+            <h2 id="categories-title">Qual universo você quer explorar?</h2>
+            <div class="category-links">
+                {% for category in categories %}
+                <a href="{{ url_for('category_recommendations', category=category) }}">{{ category }}</a>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <!-- Rodapé da página. -->
+    <footer class="site-footer">
+        <span>Comunidade Leitora</span>
+        <span>Projeto de recomendação de livros</span>
+    </footer>
+
+    <!-- Arquivo com interações em JavaScript. -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

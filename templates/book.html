@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book.title }} | Comunidade Leitora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Cabeçalho e atalho para uma nova busca. -->
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-mark">CL</span>
+            <span>Comunidade Leitora</span>
+        </a>
+        <a class="header-link" href="{{ url_for('index') }}">Nova busca</a>
+    </header>
+
+    <main class="detail-page">
+        <a class="back-link" href="{{ request.referrer or url_for('index') }}">Voltar ao catálogo</a>
+        <!-- Informações recebidas da Google Books API. -->
+        <section class="book-detail">
+            <div class="detail-cover">
+                {% if book.cover %}
+                <img src="{{ book.cover }}" alt="Capa de {{ book.title }}">
+                {% else %}
+                <span>Sem capa disponível</span>
+                {% endif %}
+            </div>
+            <div class="detail-content">
+                <p class="eyebrow">{{ book.categories | join(" / ") if book.categories else "Livro" }}</p>
+                <h1>{{ book.title }}</h1>
+                <p class="detail-author">por {{ book.authors }}</p>
+                <div class="metadata">
+                    {% if book.publisher %}<span>{{ book.publisher }}</span>{% endif %}
+                    {% if book.published_date %}<span>{{ book.published_date }}</span>{% endif %}
+                    {% if book.page_count %}<span>{{ book.page_count }} páginas</span>{% endif %}
+                    {% if book.average_rating %}<span>{{ book.average_rating }}/5 no Google Books</span>{% endif %}
+                </div>
+                <h2>Sobre o livro</h2>
+                <p class="synopsis">{{ book.description | striptags }}</p>
+                {% if book.preview_link %}
+                <a class="secondary-button" href="{{ book.preview_link }}" target="_blank" rel="noopener noreferrer">Ver no Google Books</a>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Formulário para uma pessoa enviar sua resenha. -->
+        <section class="reviews-section" aria-labelledby="reviews-title">
+            <div class="review-heading">
+                <p class="eyebrow">Opinião da comunidade</p>
+                <h2 id="reviews-title">Deixe sua resenha</h2>
+                <p>Seu nome será usado apenas para identificar este comentário.</p>
+            </div>
+            <div>
+                {% if form_error %}<p class="feedback feedback-error">{{ form_error }}</p>{% endif %}
+                {% if form_success %}<p class="feedback feedback-success">{{ form_success }}</p>{% endif %}
+                <form class="review-form" action="{{ url_for('add_review', book_id=book.id) }}" method="post">
+                    <label for="reader_name">Seu nome</label>
+                    <input id="reader_name" name="reader_name" maxlength="60" required>
+
+                    <fieldset class="rating-input">
+                        <legend>Sua avaliação</legend>
+                        <div class="star-options">
+                            {% for value in range(1, 6) %}
+                            <label><input type="radio" name="rating" value="{{ value }}" required><span>{{ value }} estrela{% if value > 1 %}s{% endif %}</span></label>
+                            {% endfor %}
+                        </div>
+                        <span class="rating-value" aria-live="polite">Escolha de 1 a 5 estrelas</span>
+                    </fieldset>
+
+                    <label for="comment">Sua resenha</label>
+                    <textarea id="comment" name="comment" rows="6" maxlength="1000" required></textarea>
+                    <button class="primary-button" type="submit">Publicar resenha</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Resenhas que já foram salvas no banco SQLite. -->
+        <section class="published-reviews" aria-labelledby="published-reviews-title">
+            <p class="eyebrow">Leituras compartilhadas</p>
+            <h2 id="published-reviews-title">Resenhas da comunidade</h2>
+            {% if reviews %}
+            <div class="review-list">
+                {% for review in reviews %}
+                <article class="review-card">
+                    <div class="review-card-header">
+                        <strong>{{ review.reader_name }}</strong>
+                        <span aria-label="{{ review.rating }} de 5 estrelas">{{ "★" * review.rating }}{{ "☆" * (5 - review.rating) }}</span>
+                    </div>
+                    <p>{{ review.comment }}</p>
+                    <time datetime="{{ review.created_at }}">{{ review.created_at[:10] }}</time>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-reviews">Ainda não há resenhas. Seja a primeira pessoa a compartilhar sua leitura.</p>
+            {% endif %}
+        </section>
+    </main>
+
+    <!-- Rodapé da página. -->
+    <footer class="site-footer">
+        <span>Comunidade Leitora</span>
+        <span>Descubra histórias para guardar.</span>
+    </footer>
+    <!-- Arquivo com interações em JavaScript. -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
