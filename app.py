@@ -1,7 +1,14 @@
+import math
+import os
 import sqlite3
+import time
 
 import requests
+from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
+
+# Carrega a chave local antes de iniciar a aplicação.
+load_dotenv()
 
 # Cria a aplicação Flask.
 app = Flask(__name__)
@@ -9,6 +16,9 @@ app = Flask(__name__)
 # Configurações usadas em todo o projeto.
 BANCO_DE_DADOS = "database.db"
 URL_GOOGLE_BOOKS = "https://www.googleapis.com/books/v1/volumes"
+CHAVE_GOOGLE_BOOKS = os.getenv("GOOGLE_BOOKS_API_KEY")
+# Dezoito completa linhas de 6, 3 ou 2 livros em cada tamanho de tela.
+LIVROS_POR_PAGINA = 18
 CATEGORIAS = [
     "Romance",
     "Fantasia",
@@ -18,6 +28,15 @@ CATEGORIAS = [
     "Poesia",
     "História",
 ]
+CATEGORIAS_API = {
+    "Romance": "romance",
+    "Fantasia": "fantasy",
+    "Ficção científica": "science fiction",
+    "Mistério": "mystery",
+    "Biografia": "biography",
+    "Poesia": "poetry",
+    "História": "history",
+}
 
 
 # Cria a tabela de resenhas quando o programa é iniciado.
@@ -43,16 +62,40 @@ def criar_banco():
 
 # Faz uma consulta na API e devolve os dados ou uma mensagem de erro.
 def consultar_google_books(url, parametros=None):
-    try:
-        resposta = requests.get(url, params=parametros, timeout=10)
-        resposta.raise_for_status()
-        return resposta.json(), None
-    except requests.HTTPError as erro:
-        if erro.response.status_code == 429:
-            return None, "O catálogo do Google Books está temporariamente ocupado. Tente novamente em alguns minutos."
-        return None, "Não foi possível consultar o catálogo de livros agora."
-    except requests.RequestException:
-        return None, "Verifique sua conexão com a internet e tente novamente."
+    # Adiciona a chave da API sem deixá-la salva no código.
+    if parametros is None:
+        parametros = {}
+
+    if not CHAVE_GOOGLE_BOOKS:
+        return None, "A chave da Google Books API não foi configurada."
+
+    parametros["key"] = CHAVE_GOOGLE_BOOKS
+
+    # Repete uma vez quando a falha pode ser temporária.
+    for tentativa in range(2):
+        try:
+            resposta = requests.get(url, params=parametros, timeout=10)
+            resposta.raise_for_status()
+            return resposta.json(), None
+        except requests.HTTPError as erro:
+            codigo = erro.response.status_code if erro.response is not None else 0
+
+            if codigo == 403:
+                return None, "A Google Books API recusou a busca. Verifique se a chave está ativa e restrita à Books API."
+            if codigo == 400:
+                return None, "A busca não pôde ser processada. Tente usar outro termo."
+            if codigo == 429 or codigo >= 500:
+                if tentativa == 0:
+                    time.sleep(1)
+                    continue
+                return None, "O catálogo do Google Books está temporariamente ocupado. Tente novamente em alguns minutos."
+
+            return None, "Não foi possível consultar o catálogo de livros agora."
+        except requests.RequestException:
+            if tentativa == 0:
+                time.sleep(1)
+                continue
+            return None, "Verifique sua conexão com a internet e tente novamente."
 
 
 # Organiza os dados recebidos da API para usar nas páginas HTML.
@@ -80,19 +123,42 @@ def organizar_livro(dados):
     }
 
 
-# Busca livros pelo título, autor ou assunto digitado.
-def buscar_livros(termo):
+# Busca uma página de livros na Google Books API.
+def buscar_livros(termo, pagina):
     dados, erro = consultar_google_books(
         URL_GOOGLE_BOOKS,
-        {"q": termo, "maxResults": 18, "printType": "books"},
+        {
+            "q": termo,
+            "maxResults": LIVROS_POR_PAGINA,
+            "startIndex": (pagina - 1) * LIVROS_POR_PAGINA,
+            "printType": "books",
+            "langRestrict": "pt",
+            "orderBy": "relevance",
+        },
     )
     if erro:
-        return [], erro
+        return [], 0, erro
 
     livros = []
     for livro in dados.get("items", []):
         livros.append(organizar_livro(livro))
-    return livros, None
+    return livros, dados.get("totalItems", 0), None
+
+
+# Lê a página atual sem aceitar números menores que um.
+def pagina_atual():
+    try:
+        return max(1, int(request.args.get("pagina", 1)))
+    except ValueError:
+        return 1
+
+
+# Define os números exibidos na navegação entre páginas.
+def dados_paginacao(total_livros, pagina):
+    total_paginas = max(1, math.ceil(total_livros / LIVROS_POR_PAGINA))
+    primeira_pagina = max(1, pagina - 2)
+    ultima_pagina = min(total_paginas, pagina + 2)
+    return total_paginas, list(range(primeira_pagina, ultima_pagina + 1))
 
 
 # Busca somente um livro para a página de detalhes.
@@ -134,17 +200,24 @@ def index():
 def search():
     # Pega o texto digitado no campo de busca.
     query = request.args.get("q", "").strip()
+    pagina = pagina_atual()
+
     if not query:
         return render_template(
             "results.html",
             books=[],
             categories=CATEGORIAS,
-            error="Digite um título, autor ou assunto para fazer uma busca.",
+            error="Digite um título ou autor para fazer uma busca.",
             heading="Encontre sua próxima leitura",
             query="",
+            page=1,
+            total_pages=1,
+            page_numbers=[],
+            category=None,
         )
 
-    books, error = buscar_livros(query)
+    books, total_livros, error = buscar_livros(query, pagina)
+    total_paginas, numeros_paginas = dados_paginacao(total_livros, pagina)
     return render_template(
         "results.html",
         books=books,
@@ -152,13 +225,25 @@ def search():
         error=error,
         heading=f'Resultados para "{query}"',
         query=query,
+        page=pagina,
+        total_pages=total_paginas,
+        page_numbers=numeros_paginas,
+        category=None,
     )
 
 
 @app.route("/categoria/<category>")
 def category_recommendations(category):
-    # Usa a categoria selecionada como busca na API.
-    books, error = buscar_livros(f"subject:{category}")
+    # Converte a categoria exibida para o termo usado pela Google Books.
+    termo = CATEGORIAS_API.get(category, category)
+    pagina = pagina_atual()
+    books, total_livros, error = buscar_livros(f'subject:"{termo}"', pagina)
+
+    # Tenta uma busca mais ampla se a primeira não encontrar livros.
+    if not books and not error:
+        books, total_livros, error = buscar_livros(termo, pagina)
+
+    total_paginas, numeros_paginas = dados_paginacao(total_livros, pagina)
     return render_template(
         "results.html",
         books=books,
@@ -166,6 +251,10 @@ def category_recommendations(category):
         error=error,
         heading=f"Recomendações de {category}",
         query="",
+        page=pagina,
+        total_pages=total_paginas,
+        page_numbers=numeros_paginas,
+        category=category,
     )
 
 
@@ -181,6 +270,10 @@ def book_detail(book_id):
             error=error,
             heading="Livro indisponivel",
             query="",
+            page=1,
+            total_pages=1,
+            page_numbers=[],
+            category=None,
         ), 503
 
     return render_template(

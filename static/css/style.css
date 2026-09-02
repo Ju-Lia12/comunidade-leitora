@@ -508,6 +508,35 @@ h1 em {
     margin: 8px 0 0;
 }
 
+/* Navegação para ver mais resultados da busca. */
+.pagination {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 55px;
+}
+
+.pagination a,
+.pagination span {
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-size: 0.82rem;
+    font-weight: 700;
+    min-width: 38px;
+    padding: 10px 12px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.pagination a:hover,
+.pagination a:focus-visible,
+.pagination .current-page {
+    background: var(--green);
+    color: var(--cream);
+}
+
 /* Informações completas de um livro. */
 .back-link {
     display: inline-block;

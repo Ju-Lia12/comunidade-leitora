@@ -25,8 +25,8 @@
             <p class="eyebrow">Catálogo de livros</p>
             <h1>{{ heading }}</h1>
             <form class="search-form catalog-search" action="{{ url_for('search') }}" method="get">
-                <label class="sr-only" for="catalog-search">Buscar livros</label>
-                <input id="catalog-search" name="q" type="search" placeholder="Título, autor ou assunto" value="{{ query }}">
+                <label class="sr-only" for="catalog-search">Busque por título ou autor</label>
+                <input id="catalog-search" name="q" type="search" placeholder="Título ou autor" value="{{ query }}">
                 <button type="submit">Buscar</button>
             </form>
         </section>
@@ -76,6 +76,36 @@
             </article>
             {% endfor %}
         </section>
+
+        {% if total_pages > 1 %}
+        <nav class="pagination" aria-label="Navegação entre páginas">
+            {% if page > 1 %}
+                {% if category %}
+                <a href="{{ url_for('category_recommendations', category=category, pagina=page - 1) }}">Anterior</a>
+                {% else %}
+                <a href="{{ url_for('search', q=query, pagina=page - 1) }}">Anterior</a>
+                {% endif %}
+            {% endif %}
+
+            {% for page_number in page_numbers %}
+                {% if page_number == page %}
+                <span class="current-page" aria-current="page">{{ page_number }}</span>
+                {% elif category %}
+                <a href="{{ url_for('category_recommendations', category=category, pagina=page_number) }}">{{ page_number }}</a>
+                {% else %}
+                <a href="{{ url_for('search', q=query, pagina=page_number) }}">{{ page_number }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+                {% if category %}
+                <a href="{{ url_for('category_recommendations', category=category, pagina=page + 1) }}">Próxima</a>
+                {% else %}
+                <a href="{{ url_for('search', q=query, pagina=page + 1) }}">Próxima</a>
+                {% endif %}
+            {% endif %}
+        </nav>
+        {% endif %}
         {% endif %}
     </main>
 
