@@ -6,3 +6,9 @@ requests==2.32.5
 
 # Carrega variáveis privadas do arquivo .env local.
 python-dotenv==1.2.3
+
+# Conecta o site ao banco PostgreSQL do Supabase.
+psycopg[binary]==3.3.5
+
+# Inicia o Flask no Render.
+gunicorn==26.2.0

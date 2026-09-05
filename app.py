@@ -1,11 +1,12 @@
 import math
 import os
-import sqlite3
 import time
 
+import psycopg
 import requests
 from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
+from psycopg.rows import dict_row
 
 # Carrega a chave local antes de iniciar a aplicação.
 load_dotenv()
@@ -14,7 +15,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configurações usadas em todo o projeto.
-BANCO_DE_DADOS = "database.db"
+URL_BANCO_DE_DADOS = os.getenv("DATABASE_URL")
 URL_GOOGLE_BOOKS = "https://www.googleapis.com/books/v1/volumes"
 CHAVE_GOOGLE_BOOKS = os.getenv("GOOGLE_BOOKS_API_KEY")
 # Dezoito completa linhas de 6, 3 ou 2 livros em cada tamanho de tela.
@@ -39,25 +40,32 @@ CATEGORIAS_API = {
 }
 
 
+# Abre a conexão com o banco de resenhas online.
+def conectar_banco():
+    if not URL_BANCO_DE_DADOS:
+        return None
+    return psycopg.connect(URL_BANCO_DE_DADOS, row_factory=dict_row)
+
+
 # Cria a tabela de resenhas quando o programa é iniciado.
 def criar_banco():
-    conexao = sqlite3.connect(BANCO_DE_DADOS)
-    cursor = conexao.cursor()
+    conexao = conectar_banco()
+    if not conexao:
+        return
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            book_id TEXT NOT NULL,
-            reader_name TEXT NOT NULL,
-            rating INTEGER NOT NULL,
-            comment TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    with conexao, conexao.cursor() as cursor:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS reviews (
+                id BIGSERIAL PRIMARY KEY,
+                book_id TEXT NOT NULL,
+                reader_name TEXT NOT NULL,
+                rating INTEGER NOT NULL,
+                comment TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
         )
-        """
-    )
-    conexao.commit()
-    conexao.close()
 
 
 # Faz uma consulta na API e devolve os dados ou uma mensagem de erro.
@@ -171,22 +179,22 @@ def buscar_livro(book_id):
 
 # Busca todas as resenhas salvas para um livro.
 def buscar_resenhas(book_id):
-    conexao = sqlite3.connect(BANCO_DE_DADOS)
-    conexao.row_factory = sqlite3.Row
-    cursor = conexao.cursor()
+    conexao = conectar_banco()
+    if not conexao:
+        return []
 
-    cursor.execute(
-        """
-        SELECT reader_name, rating, comment, created_at
-        FROM reviews
-        WHERE book_id = ?
-        ORDER BY id DESC
-        """,
-        (book_id,),
-    )
-    resenhas = cursor.fetchall()
-    conexao.close()
-    return resenhas
+    with conexao, conexao.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT reader_name, rating, comment,
+                TO_CHAR(created_at, 'MM/YYYY') AS created_at
+            FROM reviews
+            WHERE book_id = %s
+            ORDER BY id DESC
+            """,
+            (book_id,),
+        )
+        return cursor.fetchall()
 
 
 # Rotas que mostram as páginas da plataforma.
@@ -306,18 +314,25 @@ def add_review(book_id):
             )
         )
 
-    # Salva a resenha no banco de dados SQLite.
-    conexao = sqlite3.connect(BANCO_DE_DADOS)
-    cursor = conexao.cursor()
-    cursor.execute(
-        """
-        INSERT INTO reviews (book_id, reader_name, rating, comment)
-        VALUES (?, ?, ?, ?)
-        """,
-        (book_id, reader_name[:60], rating, comment[:1000]),
-    )
-    conexao.commit()
-    conexao.close()
+    conexao = conectar_banco()
+    if not conexao:
+        return redirect(
+            url_for(
+                "book_detail",
+                book_id=book_id,
+                form_error="O banco de resenhas ainda não foi configurado.",
+            )
+        )
+
+    # Salva a resenha no banco de dados PostgreSQL.
+    with conexao, conexao.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO reviews (book_id, reader_name, rating, comment)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (book_id, reader_name[:60], rating, comment[:1000]),
+        )
 
     return redirect(
         url_for(
@@ -334,4 +349,4 @@ criar_banco()
 
 if __name__ == "__main__":
     # Inicia o servidor local para abrir o projeto no navegador.
-    app.run(debug=True)
+    app.run()

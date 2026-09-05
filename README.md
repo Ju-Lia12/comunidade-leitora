@@ -2,21 +2,20 @@
 
 Site simples para encontrar livros, conhecer categorias e compartilhar resenhas.
 
-# O que o site faz
+## O que o site faz
 
 - Busca livros por título ou autor.
 - Mostra recomendações por categoria.
 - Exibe detalhes de cada livro.
 - Permite publicar resenhas com nome, nota e comentário.
 
-# Tecnologias usadas
+## Tecnologias usadas
 
-- Python
-- Flask
-- SQLite
-- Google Books API
+- Python e Flask.
+- PostgreSQL no Supabase para as resenhas.
+- Google Books API para os livros.
 
-# Como executar
+## Como executar no computador
 
 1. Crie o ambiente virtual:
 
@@ -30,10 +29,11 @@ python -m venv .venv
 & ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt
 ```
 
-3. No arquivo `.env`, informe a sua chave da Google Books API:
+3. Preencha o arquivo `.env`:
 
 ```env
 GOOGLE_BOOKS_API_KEY=SUA_CHAVE_AQUI
+DATABASE_URL=URL_DO_BANCO_SUPABASE_AQUI
 ```
 
 4. Inicie o site:
@@ -48,6 +48,32 @@ GOOGLE_BOOKS_API_KEY=SUA_CHAVE_AQUI
 http://127.0.0.1:5000
 ```
 
-# Importante
+## Banco de resenhas
 
-O arquivo `.env` guarda a chave da API e não é enviado ao GitHub.
+1. Crie uma conta gratuita no Supabase.
+2. Crie um projeto novo.
+3. Em `Connect`, copie a URL de conexão do banco.
+4. Cole a URL no valor de `DATABASE_URL` do arquivo `.env`.
+
+A tabela de resenhas é criada automaticamente quando o site inicia.
+
+## Publicação no Render
+
+1. Crie uma conta gratuita no Render.
+2. Escolha `New` e depois `Web Service`.
+3. Conecte o repositório `Comunidade-Leitora`.
+4. Use estes comandos:
+
+```text
+Build Command: pip install -r requirements.txt
+Start Command: gunicorn app:app
+```
+
+5. Em `Environment`, cadastre estes segredos:
+
+```text
+GOOGLE_BOOKS_API_KEY
+DATABASE_URL
+```
+
+O arquivo `.env` não vai para o GitHub. No Render, os valores são cadastrados diretamente como segredos.

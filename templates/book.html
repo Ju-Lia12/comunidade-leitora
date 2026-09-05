@@ -92,7 +92,7 @@
                         <span aria-label="{{ review.rating }} de 5 estrelas">{{ "★" * review.rating }}{{ "☆" * (5 - review.rating) }}</span>
                     </div>
                     <p>{{ review.comment }}</p>
-                    <time datetime="{{ review.created_at }}">{{ review.created_at[:10] }}</time>
+                    <time>{{ review.created_at }}</time>
                 </article>
                 {% endfor %}
             </div>
